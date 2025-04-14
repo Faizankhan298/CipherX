@@ -36,6 +36,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Text(
+              'Enter your email to reset your password.',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
             TextField(
               controller: emailController,
               decoration: const InputDecoration(hintText: 'Email'),
@@ -43,7 +49,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: resetPassword,
-              child: const Text('Send Reset Link'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7B61FF),
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text(
+                'Send Reset Link',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
