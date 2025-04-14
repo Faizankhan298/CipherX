@@ -12,7 +12,20 @@
           "package_name": "com.example.cipherx"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "283142578125-4jvm3rafkgruusiih8qcl5bm4shu1oo5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cipherx",
+            "certificate_hash": "fe3fc864321848858cd57181b71a87098c1618b9"
+          }
+        },
+        {
+          "client_id": "283142578125-o5s6pv8c4455r05slrbbo1b0gaot6c6o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBkpcMUKM5dn7keEKF-IhTL6Bx5IMMH2Aw"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "283142578125-o5s6pv8c4455r05slrbbo1b0gaot6c6o.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "283142578125-hije5c8mvi55kukul03uldbcmd9s5kul.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.cipherx"
+              }
+            }
+          ]
         }
       }
     }
