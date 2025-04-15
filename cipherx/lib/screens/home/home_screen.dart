@@ -22,6 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final user = FirebaseAuth.instance.currentUser;
   int _currentIndex = 0;
   List<TransactionModel> _transactions = [];
+  double _totalIncome = 0.0;
+  double _totalExpenses = 0.0;
 
   final List<String> _titles = [
     'Home',
@@ -43,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchTransactions();
+    _calculateTotals();
   }
 
   Future<void> _fetchTransactions() async {
@@ -77,6 +80,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _calculateTotals() {
+    _totalIncome = _transactions
+        .where((t) => t.type == 'Income')
+        .fold(0.0, (total, transaction) => total + transaction.amount);
+    _totalExpenses = _transactions
+        .where((t) => t.type == 'Expense')
+        .fold(0.0, (total, transaction) => total + transaction.amount);
+  }
+
+  Future<void> _deleteTransaction(TransactionModel transaction) async {
+    // Delete from Firestore
+    await FirebaseFirestore.instance
+        .collection('transactions')
+        .doc(transaction.id)
+        .delete();
+    // Delete from Hive
+    final box = await Hive.openBox('transactions');
+    await box.delete(transaction.id);
+    // Update state
+    setState(() {
+      _transactions.remove(transaction);
+      _calculateTotals();
+    });
+  }
+
   signout() async {
     await FirebaseAuth.instance.signOut();
     Get.offAll(const LoginScreen());
@@ -92,11 +120,70 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body:
-          _currentIndex == 1
-              ? TransactionTab(
-                transactions: _transactions,
-              ) // Use _transactions directly
-              : _screens[_currentIndex], // Use _screens for other tabs
+          _currentIndex == 0
+              ? Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Welcome back, ${user?.email ?? 'User'}!',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildSummaryCard(
+                        'Total Income',
+                        _totalIncome,
+                        Colors.green,
+                      ),
+                      _buildSummaryCard(
+                        'Total Expenses',
+                        _totalExpenses,
+                        Colors.red,
+                      ),
+                      _buildSummaryCard(
+                        'Balance',
+                        _totalIncome - _totalExpenses,
+                        Colors.blue,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount:
+                          _transactions.length > 10 ? 10 : _transactions.length,
+                      itemBuilder: (context, index) {
+                        final transaction = _transactions[index];
+                        return Dismissible(
+                          key: Key(transaction.id),
+                          onDismissed:
+                              (direction) => _deleteTransaction(transaction),
+                          child: ListTile(
+                            leading: Icon(
+                              transaction.type == 'Income'
+                                  ? Icons.arrow_upward
+                                  : Icons.arrow_downward,
+                              color:
+                                  transaction.type == 'Income'
+                                      ? Colors.green
+                                      : Colors.red,
+                            ),
+                            title: Text(transaction.category),
+                            subtitle: Text(transaction.description),
+                            trailing: Text(
+                              '\$${transaction.amount.toStringAsFixed(2)}',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              )
+              : _screens[_currentIndex],
       bottomNavigationBar: SharedButtons(
         currentIndex: _currentIndex,
         onTabSelected: (index) {
@@ -104,6 +191,25 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(String title, double value, Color color) {
+    return Card(
+      color: color,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(title, style: const TextStyle(color: Colors.white)),
+            const SizedBox(height: 8),
+            Text(
+              '\$${value.toStringAsFixed(2)}',
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ],
+        ),
       ),
     );
   }

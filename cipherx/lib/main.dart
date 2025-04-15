@@ -10,11 +10,9 @@ import 'providers/transaction_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(TransactionModelAdapter()); // Register the adapter
-
   runApp(const MyApp());
 }
 
@@ -30,6 +28,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         ),
         home: const HomeScreen(),
+        debugShowCheckedModeBanner: false,
       ),
     );
   }
