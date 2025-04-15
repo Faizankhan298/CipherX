@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
 import 'package:cipherx/models/transaction_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final user = FirebaseAuth.instance.currentUser;
   int _currentIndex = 0;
   List<TransactionModel> _transactions = [];
+  List<TransactionModel> _localTransactions =
+      []; // Local cache for transactions
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
   String _selectedFilter = 'Today';
@@ -36,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const Center(child: Text('Home')),
-    const TransactionTab(transactions: []),
+    const TransactionTab(), // Removed `transactions` parameter
     const AddTransactionScreen(),
     const BudgetScreen(),
     const ProfileScreen(),
@@ -46,11 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchTransactions();
-    _calculateTotals();
   }
 
-  Future<void> _fetchTransactions() async {
-    if (user == null) return;
+  Future<List<TransactionModel>> _fetchTransactions() async {
+    if (user == null) return [];
 
     try {
       final querySnapshot =
@@ -58,33 +58,52 @@ class _HomeScreenState extends State<HomeScreen> {
               .collection('transactions')
               .where('userId', isEqualTo: user!.uid)
               .orderBy('timestamp', descending: true)
+              .limit(5) // Limit to 5 recent transactions
               .get();
 
       final transactions =
-          querySnapshot.docs
-              .map((doc) => TransactionModel.fromFirestore(doc))
-              .toList();
+          querySnapshot.docs.map((doc) {
+            return TransactionModel.fromFirestore(doc);
+          }).toList();
 
-      final box = await Hive.openBox('transactions');
-      await box.clear();
-      await box.addAll(transactions.map((t) => t.toMap()));
+      _localTransactions = transactions; // Update local cache
+      _transactions = transactions; // Update UI transactions
+      _calculateTotals(); // Recalculate totals after fetching
 
-      setState(() {
-        _transactions = transactions;
-      });
+      return transactions;
     } catch (e) {
-      setState(() {
-        _transactions = [];
-      });
       debugPrint('Error fetching transactions: $e');
+      return [];
     }
   }
 
   void _calculateTotals() {
-    _totalIncome = _transactions
+    final now = DateTime.now();
+    final filteredTransactions =
+        _transactions.where((t) {
+          switch (_selectedFilter) {
+            case 'Today':
+              return t.timestamp.day == now.day &&
+                  t.timestamp.month == now.month &&
+                  t.timestamp.year == now.year;
+            case 'Week':
+              final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+              return t.timestamp.isAfter(startOfWeek) &&
+                  t.timestamp.isBefore(now.add(const Duration(days: 1)));
+            case 'Month':
+              return t.timestamp.month == now.month &&
+                  t.timestamp.year == now.year;
+            case 'Year':
+              return t.timestamp.year == now.year;
+            default:
+              return true;
+          }
+        }).toList();
+
+    _totalIncome = filteredTransactions
         .where((t) => t.type == 'Income')
         .fold(0.0, (total, transaction) => total + transaction.amount);
-    _totalExpenses = _transactions
+    _totalExpenses = filteredTransactions
         .where((t) => t.type == 'Expense')
         .fold(0.0, (total, transaction) => total + transaction.amount);
   }
@@ -132,31 +151,55 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
                   _buildFilterRow(),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: _transactions.length,
-                      itemBuilder: (context, index) {
-                        final transaction = _transactions[index];
-                        return ListTile(
-                          leading: Icon(
-                            transaction.type == 'Income'
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward,
-                            color:
-                                transaction.type == 'Income'
-                                    ? Colors.green
-                                    : Colors.red,
-                          ),
-                          title: Text(transaction.category),
-                          subtitle: Text(transaction.description),
-                          trailing: Text(
-                            '${transaction.type == 'Income' ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color:
-                                  transaction.type == 'Income'
-                                      ? Colors.green
-                                      : Colors.red,
-                            ),
-                          ),
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('transactions')
+                              .where('userId', isEqualTo: user?.uid)
+                              .orderBy('timestamp', descending: true)
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return ListView.builder(
+                            itemCount: _localTransactions.length,
+                            itemBuilder: (context, index) {
+                              final transaction = _localTransactions[index];
+                              return _buildTransactionTile(transaction);
+                            },
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return const Center(
+                            child: Text('Error loading transactions.'),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(
+                            child: Text('No transactions found.'),
+                          );
+                        }
+
+                        final transactions =
+                            snapshot.data!.docs.map((doc) {
+                              return TransactionModel.fromFirestore(doc);
+                            }).toList();
+
+                        // Update local cache without calling setState
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _localTransactions = transactions;
+                          _transactions = transactions;
+                          _calculateTotals();
+                        });
+
+                        return ListView.builder(
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final transaction = transactions[index];
+                            return _buildTransactionTile(transaction);
+                          },
                         );
                       },
                     ),
@@ -206,10 +249,30 @@ class _HomeScreenState extends State<HomeScreen> {
               onSelected: (selected) {
                 setState(() {
                   _selectedFilter = filter;
+                  _calculateTotals(); // Recalculate totals when filter changes
                 });
               },
             );
           }).toList(),
+    );
+  }
+
+  Widget _buildTransactionTile(TransactionModel transaction) {
+    return ListTile(
+      leading: Icon(
+        transaction.type == 'Income'
+            ? Icons.arrow_upward
+            : Icons.arrow_downward,
+        color: transaction.type == 'Income' ? Colors.green : Colors.red,
+      ),
+      title: Text(transaction.category),
+      subtitle: Text(transaction.description),
+      trailing: Text(
+        '${transaction.type == 'Income' ? '+' : '-'}₹${transaction.amount.toStringAsFixed(2)}',
+        style: TextStyle(
+          color: transaction.type == 'Income' ? Colors.green : Colors.red,
+        ),
+      ),
     );
   }
 }

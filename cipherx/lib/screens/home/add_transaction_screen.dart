@@ -66,7 +66,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         setState(() {
           _amountController.clear();
           _descriptionController.clear();
-          _selectedDate = DateTime.now(); // Reset to current date
+          _category = 'Food'; // Reset category
+          _type = 'Income'; // Reset type
+          _selectedDate = DateTime.now(); // Reset date
         });
 
         if (!mounted) return; // Guard BuildContext usage
