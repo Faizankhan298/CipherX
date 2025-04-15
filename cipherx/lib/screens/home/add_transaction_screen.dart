@@ -21,6 +21,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Future<void> _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedDate.isAfter(DateTime.now())) {
+        if (!mounted) return; // Guard BuildContext usage
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a valid date.')),
         );
@@ -28,41 +29,61 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return;
+      if (userId == null) {
+        if (!mounted) return; // Guard BuildContext usage
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('User not logged in.')));
+        return;
+      }
 
       final transaction = {
         'amount': double.parse(_amountController.text),
         'category': _category,
         'description': _descriptionController.text,
         'type': _type,
-        'timestamp': _selectedDate.toIso8601String(), // Save date as ISO string
+        'timestamp': Timestamp.fromDate(
+          _selectedDate,
+        ), // Use Firestore Timestamp
         'userId': userId,
       };
 
-      // Save to Firestore
-      await FirebaseFirestore.instance.collection('transactions').add({
-        ...transaction,
-        'timestamp': Timestamp.fromDate(
-          _selectedDate,
-        ), // Convert to Firestore Timestamp
-      });
+      try {
+        // Save to Firestore
+        await FirebaseFirestore.instance
+            .collection('transactions')
+            .add(transaction);
 
-      // Sync with Hive (local storage)
-      final box = await Hive.openBox('transactions');
-      await box.add({
-        ...transaction,
-        'timestamp':
-            _selectedDate.toIso8601String(), // Save as ISO string for Hive
-      });
+        // Sync with Hive (local storage)
+        final box = await Hive.openBox('transactions');
+        await box.add({
+          ...transaction,
+          'timestamp':
+              _selectedDate.toIso8601String(), // Save as ISO string for Hive
+        });
 
-      // Guard BuildContext usage with `mounted`
-      if (!mounted) return;
+        // Clear fields after saving
+        setState(() {
+          _amountController.clear();
+          _descriptionController.clear();
+          _selectedDate = DateTime.now(); // Reset to current date
+        });
 
-      // Navigate back or show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction saved successfully!')),
-      );
-      Navigator.pop(context);
+        if (!mounted) return; // Guard BuildContext usage
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaction saved successfully!')),
+        );
+
+        // Navigate back
+        Navigator.pop(context);
+      } catch (e) {
+        if (!mounted) return; // Guard BuildContext usage
+        // Handle errors
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving transaction: $e')));
+      }
     }
   }
 
@@ -83,7 +104,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Transaction')),
       body: Center(
         // Center the form
         child: Padding(

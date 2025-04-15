@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<TransactionModel> _transactions = [];
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
+  String _selectedFilter = 'Today';
 
   final List<String> _titles = [
     'Home',
@@ -34,8 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   final List<Widget> _screens = [
-    const Center(child: Text('Home')), // Added 'const' to the constructor
-    const TransactionTab(transactions: []), // Added 'const' to the constructor
+    const Center(child: Text('Home')),
+    const TransactionTab(transactions: []),
     const AddTransactionScreen(),
     const BudgetScreen(),
     const ProfileScreen(),
@@ -64,9 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
               .map((doc) => TransactionModel.fromFirestore(doc))
               .toList();
 
-      // Sync with Hive (local storage)
       final box = await Hive.openBox('transactions');
-      await box.clear(); // Clear old data
+      await box.clear();
       await box.addAll(transactions.map((t) => t.toMap()));
 
       setState(() {
@@ -89,22 +89,6 @@ class _HomeScreenState extends State<HomeScreen> {
         .fold(0.0, (total, transaction) => total + transaction.amount);
   }
 
-  Future<void> _deleteTransaction(TransactionModel transaction) async {
-    // Delete from Firestore
-    await FirebaseFirestore.instance
-        .collection('transactions')
-        .doc(transaction.id)
-        .delete();
-    // Delete from Hive
-    final box = await Hive.openBox('transactions');
-    await box.delete(transaction.id);
-    // Update state
-    setState(() {
-      _transactions.remove(transaction);
-      _calculateTotals();
-    });
-  }
-
   signout() async {
     await FirebaseAuth.instance.signOut();
     Get.offAll(const LoginScreen());
@@ -113,12 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: signout),
-        ],
-      ),
+      appBar: AppBar(title: Text(_titles[_currentIndex])),
       body:
           _currentIndex == 0
               ? Column(
@@ -126,55 +105,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      'Welcome back, ${user?.email ?? 'User'}!',
+                      'Account Balance',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildSummaryCard(
-                        'Total Income',
-                        _totalIncome,
-                        Colors.green,
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'Income',
+                          _totalIncome,
+                          Colors.green,
+                        ),
                       ),
-                      _buildSummaryCard(
-                        'Total Expenses',
-                        _totalExpenses,
-                        Colors.red,
-                      ),
-                      _buildSummaryCard(
-                        'Balance',
-                        _totalIncome - _totalExpenses,
-                        Colors.blue,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildSummaryCard(
+                          'Expenses',
+                          _totalExpenses,
+                          Colors.red,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
+                  _buildFilterRow(),
                   Expanded(
                     child: ListView.builder(
-                      itemCount:
-                          _transactions.length > 10 ? 10 : _transactions.length,
+                      itemCount: _transactions.length,
                       itemBuilder: (context, index) {
                         final transaction = _transactions[index];
-                        return Dismissible(
-                          key: Key(transaction.id),
-                          onDismissed:
-                              (direction) => _deleteTransaction(transaction),
-                          child: ListTile(
-                            leading: Icon(
-                              transaction.type == 'Income'
-                                  ? Icons.arrow_upward
-                                  : Icons.arrow_downward,
+                        return ListTile(
+                          leading: Icon(
+                            transaction.type == 'Income'
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward,
+                            color:
+                                transaction.type == 'Income'
+                                    ? Colors.green
+                                    : Colors.red,
+                          ),
+                          title: Text(transaction.category),
+                          subtitle: Text(transaction.description),
+                          trailing: Text(
+                            '${transaction.type == 'Income' ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}',
+                            style: TextStyle(
                               color:
                                   transaction.type == 'Income'
                                       ? Colors.green
                                       : Colors.red,
-                            ),
-                            title: Text(transaction.category),
-                            subtitle: Text(transaction.description),
-                            trailing: Text(
-                              '\$${transaction.amount.toStringAsFixed(2)}',
                             ),
                           ),
                         );
@@ -205,12 +185,31 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(title, style: const TextStyle(color: Colors.white)),
             const SizedBox(height: 8),
             Text(
-              '\$${value.toStringAsFixed(2)}',
+              '₹${value.toStringAsFixed(2)}', // Use Indian Rupee symbol
               style: const TextStyle(color: Colors.white, fontSize: 18),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterRow() {
+    final filters = ['Today', 'Week', 'Month', 'Year'];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children:
+          filters.map((filter) {
+            return ChoiceChip(
+              label: Text(filter),
+              selected: _selectedFilter == filter,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedFilter = filter;
+                });
+              },
+            );
+          }).toList(),
     );
   }
 }
