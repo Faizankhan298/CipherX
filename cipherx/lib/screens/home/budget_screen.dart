@@ -39,16 +39,10 @@ class BudgetScreen extends StatelessWidget {
 
               final totalIncome = transactions
                   .where((t) => t.type == 'Income')
-                  .fold(
-                    0.0,
-                    (total, t) => total + t.amount,
-                  ); // Removed `?? 0.0`
+                  .fold(0.0, (total, t) => total + t.amount);
               final totalExpenses = transactions
                   .where((t) => t.type == 'Expense')
-                  .fold(
-                    0.0,
-                    (total, t) => total + t.amount,
-                  ); // Removed `?? 0.0`
+                  .fold(0.0, (total, t) => total + t.amount);
 
               return BarChart(
                 BarChartData(
@@ -118,8 +112,7 @@ class BudgetScreen extends StatelessWidget {
               final categoryTotals = <String, double>{};
               for (var t in transactions) {
                 categoryTotals[t.category] =
-                    (categoryTotals[t.category] ?? 0) +
-                    t.amount; // Removed `?? 0.0`
+                    (categoryTotals[t.category] ?? 0) + t.amount;
               }
 
               return PieChart(
@@ -129,7 +122,7 @@ class BudgetScreen extends StatelessWidget {
                         final color =
                             Colors.primaries[categoryTotals.keys
                                     .toList()
-                                    .indexOf(entry.key) % 
+                                    .indexOf(entry.key) %
                                 Colors.primaries.length];
                         return PieChartSectionData(
                           value: entry.value,

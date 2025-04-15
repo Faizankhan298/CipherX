@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cipherx/models/transaction_model.dart';
+import 'package:hive/hive.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen> {
       []; // Local cache for transactions
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
-  String _selectedFilter = 'Today';
 
   final List<String> _titles = [
     'Home',
@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const Center(child: Text('Home')),
-    const TransactionTab(), // Removed `transactions` parameter
+    const TransactionTab(),
     const AddTransactionScreen(),
     const BudgetScreen(),
     const ProfileScreen(),
@@ -46,19 +46,32 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchTransactions();
+    _loadTransactionsFromHive();
+    _syncTransactionsWithFirestore();
   }
 
-  Future<List<TransactionModel>> _fetchTransactions() async {
-    if (user == null) return [];
+  Future<void> _loadTransactionsFromHive() async {
+    final box = await Hive.openBox('transactions');
+    final transactions =
+        box.values.map((data) {
+          return TransactionModel.fromHive(data as Map<dynamic, dynamic>);
+        }).toList();
+
+    setState(() {
+      _localTransactions = transactions;
+      _transactions = transactions;
+      _calculateTotals();
+    });
+  }
+
+  Future<void> _syncTransactionsWithFirestore() async {
+    if (user == null) return;
 
     try {
       final querySnapshot =
           await FirebaseFirestore.instance
               .collection('transactions')
               .where('userId', isEqualTo: user!.uid)
-              .orderBy('timestamp', descending: true)
-              .limit(5) // Limit to 5 recent transactions
               .get();
 
       final transactions =
@@ -66,44 +79,27 @@ class _HomeScreenState extends State<HomeScreen> {
             return TransactionModel.fromFirestore(doc);
           }).toList();
 
-      _localTransactions = transactions; // Update local cache
-      _transactions = transactions; // Update UI transactions
-      _calculateTotals(); // Recalculate totals after fetching
+      final box = await Hive.openBox('transactions');
+      await box.clear(); // Clear old data
+      for (var transaction in transactions) {
+        await box.add(transaction.toHive());
+      }
 
-      return transactions;
+      setState(() {
+        _localTransactions = transactions;
+        _transactions = transactions;
+        _calculateTotals();
+      });
     } catch (e) {
-      debugPrint('Error fetching transactions: $e');
-      return [];
+      debugPrint('Error syncing transactions: $e');
     }
   }
 
   void _calculateTotals() {
-    final now = DateTime.now();
-    final filteredTransactions =
-        _transactions.where((t) {
-          switch (_selectedFilter) {
-            case 'Today':
-              return t.timestamp.day == now.day &&
-                  t.timestamp.month == now.month &&
-                  t.timestamp.year == now.year;
-            case 'Week':
-              final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-              return t.timestamp.isAfter(startOfWeek) &&
-                  t.timestamp.isBefore(now.add(const Duration(days: 1)));
-            case 'Month':
-              return t.timestamp.month == now.month &&
-                  t.timestamp.year == now.year;
-            case 'Year':
-              return t.timestamp.year == now.year;
-            default:
-              return true;
-          }
-        }).toList();
-
-    _totalIncome = filteredTransactions
+    _totalIncome = _transactions
         .where((t) => t.type == 'Income')
         .fold(0.0, (total, transaction) => total + transaction.amount);
-    _totalExpenses = filteredTransactions
+    _totalExpenses = _transactions
         .where((t) => t.type == 'Expense')
         .fold(0.0, (total, transaction) => total + transaction.amount);
   }
@@ -149,58 +145,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _buildFilterRow(),
                   Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream:
-                          FirebaseFirestore.instance
-                              .collection('transactions')
-                              .where('userId', isEqualTo: user?.uid)
-                              .orderBy('timestamp', descending: true)
-                              .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return ListView.builder(
-                            itemCount: _localTransactions.length,
-                            itemBuilder: (context, index) {
-                              final transaction = _localTransactions[index];
-                              return _buildTransactionTile(transaction);
-                            },
-                          );
-                        }
-
-                        if (snapshot.hasError) {
-                          return const Center(
-                            child: Text('Error loading transactions.'),
-                          );
-                        }
-
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(
-                            child: Text('No transactions found.'),
-                          );
-                        }
-
-                        final transactions =
-                            snapshot.data!.docs.map((doc) {
-                              return TransactionModel.fromFirestore(doc);
-                            }).toList();
-
-                        // Update local cache without calling setState
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _localTransactions = transactions;
-                          _transactions = transactions;
-                          _calculateTotals();
-                        });
-
-                        return ListView.builder(
-                          itemCount: transactions.length,
-                          itemBuilder: (context, index) {
-                            final transaction = transactions[index];
-                            return _buildTransactionTile(transaction);
-                          },
-                        );
+                    child: ListView.builder(
+                      itemCount: _localTransactions.length,
+                      itemBuilder: (context, index) {
+                        final transaction = _localTransactions[index];
+                        return _buildTransactionTile(transaction);
                       },
                     ),
                   ),
@@ -228,32 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(title, style: const TextStyle(color: Colors.white)),
             const SizedBox(height: 8),
             Text(
-              '₹${value.toStringAsFixed(2)}', // Use Indian Rupee symbol
+              '₹${value.toStringAsFixed(2)}',
               style: const TextStyle(color: Colors.white, fontSize: 18),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildFilterRow() {
-    final filters = ['Today', 'Week', 'Month', 'Year'];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children:
-          filters.map((filter) {
-            return ChoiceChip(
-              label: Text(filter),
-              selected: _selectedFilter == filter,
-              onSelected: (selected) {
-                setState(() {
-                  _selectedFilter = filter;
-                  _calculateTotals(); // Recalculate totals when filter changes
-                });
-              },
-            );
-          }).toList(),
     );
   }
 
@@ -268,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       title: Text(transaction.category),
       subtitle: Text(transaction.description),
       trailing: Text(
-        '${transaction.type == 'Income' ? '+' : '-'}₹${transaction.amount.toStringAsFixed(2)}',
+        '₹${transaction.amount.toStringAsFixed(2)}',
         style: TextStyle(
           color: transaction.type == 'Income' ? Colors.green : Colors.red,
         ),

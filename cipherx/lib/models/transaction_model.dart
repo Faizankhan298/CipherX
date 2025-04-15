@@ -21,9 +21,6 @@ class TransactionModel {
   final String type;
 
   @HiveField(5)
-  final DateTime timestamp;
-
-  @HiveField(6)
   final String userId;
 
   TransactionModel({
@@ -32,7 +29,6 @@ class TransactionModel {
     required this.category,
     required this.description,
     required this.type,
-    required this.timestamp,
     required this.userId,
   });
 
@@ -40,12 +36,11 @@ class TransactionModel {
     final data = doc.data() as Map<String, dynamic>;
     return TransactionModel(
       id: doc.id,
-      amount: data['amount'],
-      category: data['category'],
-      description: data['description'],
-      type: data['type'],
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
-      userId: data['userId'],
+      amount: data['amount'] as double,
+      category: data['category'] as String,
+      description: data['description'] as String,
+      type: data['type'] as String,
+      userId: data['userId'] as String,
     );
   }
 
@@ -56,8 +51,18 @@ class TransactionModel {
       category: map['category'],
       description: map['description'],
       type: map['type'],
-      timestamp: DateTime.parse(map['timestamp']),
       userId: map['userId'],
+    );
+  }
+
+  factory TransactionModel.fromHive(Map<dynamic, dynamic> data) {
+    return TransactionModel(
+      id: data['id'] as String,
+      amount: data['amount'] as double,
+      category: data['category'] as String,
+      description: data['description'] as String,
+      type: data['type'] as String,
+      userId: data['userId'] as String,
     );
   }
 
@@ -67,7 +72,17 @@ class TransactionModel {
       'category': category,
       'description': description,
       'type': type,
-      'timestamp': timestamp.toIso8601String(),
+      'userId': userId,
+    };
+  }
+
+  Map<String, dynamic> toHive() {
+    return {
+      'id': id,
+      'amount': amount,
+      'category': category,
+      'description': description,
+      'type': type,
       'userId': userId,
     };
   }
