@@ -4,8 +4,11 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart'; // Import Hive Flutter
 import 'package:cipherx/models/transaction_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/transaction_provider.dart';
-import './screens/splash_screen.dart';
+// import './screens/splash_screen.dart';
+import './screens/home/home_screen.dart';
+import './screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,11 +16,17 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(TransactionModelAdapter()); // Register the adapter
-  runApp(const MyApp());
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn =
+      prefs.getBool('isLoggedIn') ?? false; // Ensure default value is false
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+
+  const MyApp({Key? key, required this.isLoggedIn}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -27,7 +36,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         ),
-        home: const SplashScreen(),
+        home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
         debugShowCheckedModeBanner: false,
       ),
     );
