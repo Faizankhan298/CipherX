@@ -6,8 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cipherx/models/transaction_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/transaction_provider.dart';
-import './screens/home/home_screen.dart';
-import './screens/auth/login_screen.dart';
+import './screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,8 +14,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(TransactionModelAdapter());
   final prefs = await SharedPreferences.getInstance();
-  final isLoggedIn =
-      prefs.getBool('isLoggedIn') ?? false;
+  final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
   runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
@@ -34,7 +32,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         ),
-        home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+        home: const SplashScreen(), // Always show SplashScreen first
         debugShowCheckedModeBanner: false,
       ),
     );
