@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
+import 'package:get/get.dart';
+import 'package:cipherx/screens/home/home_screen.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -29,9 +31,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       final transaction = {
-        'amount': double.parse(_amountController.text),
+        'amount':
+            double.tryParse(_amountController.text) ?? 0.0, // Ensure non-null
         'category': _category,
-        'description': _descriptionController.text,
+        'description':
+            _descriptionController.text.isNotEmpty
+                ? _descriptionController.text
+                : 'No description', // Default if empty
         'type': _type,
         'userId': userId,
       };
@@ -61,7 +67,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         );
 
         // Navigate back
-        Navigator.pop(context);
+        Get.off(() => const HomeScreen()); // Use Get.off instead of Get.offAll
       } catch (e) {
         if (!mounted) return; // Guard BuildContext usage
         // Handle errors

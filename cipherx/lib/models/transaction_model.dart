@@ -57,12 +57,12 @@ class TransactionModel {
 
   factory TransactionModel.fromHive(Map<dynamic, dynamic> data) {
     return TransactionModel(
-      id: data['id'] as String,
-      amount: data['amount'] as double,
-      category: data['category'] as String,
-      description: data['description'] as String,
-      type: data['type'] as String,
-      userId: data['userId'] as String,
+      id: data['id'] as String? ?? '', // Provide default value if null
+      amount: data['amount'] as double? ?? 0.0, // Provide default value if null
+      category: data['category'] as String? ?? 'Unknown', // Default category
+      description: data['description'] as String? ?? 'No description', // Default description
+      type: data['type'] as String? ?? 'Unknown', // Default type
+      userId: data['userId'] as String? ?? '', // Provide default value if null
     );
   }
 
