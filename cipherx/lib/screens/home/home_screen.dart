@@ -111,6 +111,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if refresh argument is passed
+    final refresh = Get.arguments?['refresh'] ?? false;
+    if (refresh) {
+      _syncTransactionsWithFirestore();
+      // Clear the refresh argument after syncing
+      Get.arguments?['refresh'] = false;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -168,6 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
         onTabSelected: (index) {
           setState(() {
             _currentIndex = index;
+            // Fetch latest transactions when switching back to Home tab
+            if (_currentIndex == 0) {
+              _syncTransactionsWithFirestore();
+            }
           });
         },
       ),

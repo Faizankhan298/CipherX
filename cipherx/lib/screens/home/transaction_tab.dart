@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:cipherx/models/transaction_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TransactionTab extends StatefulWidget {
   const TransactionTab({super.key});
@@ -35,6 +37,9 @@ class _TransactionTabState extends State<TransactionTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Fetch latest data when the tab is built
+    _syncTransactionsWithFirestore();
+
     return Column(
       children: [
         Padding(
@@ -97,6 +102,36 @@ class _TransactionTabState extends State<TransactionTab> {
         ),
       ],
     );
+  }
+
+  Future<void> _syncTransactionsWithFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('transactions')
+              .where('userId', isEqualTo: user.uid)
+              .get();
+
+      final transactions =
+          querySnapshot.docs.map((doc) {
+            return TransactionModel.fromFirestore(doc);
+          }).toList();
+
+      final box = await Hive.openBox('transactions');
+      await box.clear(); // Clear old data
+      for (var transaction in transactions) {
+        await box.add(transaction.toHive());
+      }
+
+      setState(() {
+        _localTransactions = transactions;
+      });
+    } catch (e) {
+      debugPrint('Error syncing transactions: $e');
+    }
   }
 
   Widget _buildTransactionTile(TransactionModel transaction) {

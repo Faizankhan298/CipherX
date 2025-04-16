@@ -66,8 +66,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SnackBar(content: Text('Transaction saved successfully!')),
         );
 
-        // Navigate back
-        Get.off(() => const HomeScreen()); // Use Get.off instead of Get.offAll
+        // Notify HomeScreen and TransactionTab to fetch latest data
+        Get.off(() => const HomeScreen(), arguments: {'refresh': true});
       } catch (e) {
         if (!mounted) return; // Guard BuildContext usage
         // Handle errors
