@@ -1,8 +1,8 @@
-import 'package:fl_chart/fl_chart.dart'; // For charts
+import 'package:fl_chart/fl_chart.dart';  
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cipherx/models/transaction_model.dart'; // Corrected import
+import 'package:cipherx/models/transaction_model.dart';  
 
 class BudgetScreen extends StatelessWidget {
   const BudgetScreen({super.key});

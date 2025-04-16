@@ -2,23 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Import Hive Flutter
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cipherx/models/transaction_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/transaction_provider.dart';
-// import './screens/splash_screen.dart';
 import './screens/home/home_screen.dart';
 import './screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  // Initialize Hive
   await Hive.initFlutter();
-  Hive.registerAdapter(TransactionModelAdapter()); // Register the adapter
+  Hive.registerAdapter(TransactionModelAdapter());
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn =
-      prefs.getBool('isLoggedIn') ?? false; // Ensure default value is false
+      prefs.getBool('isLoggedIn') ?? false;
   runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 

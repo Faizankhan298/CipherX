@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cipherx/screens/auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -12,12 +12,12 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _isDarkMode = false; // Track dark mode state
+  bool _isDarkMode = false;
 
   @override
   void initState() {
     super.initState();
-    _loadThemePreference(); // Load the saved theme preference
+    _loadThemePreference();
   }
 
   Future<void> _loadThemePreference() async {
@@ -64,38 +64,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 350),
           ElevatedButton.icon(
             onPressed: () => _exportData(context),
-            icon: const Icon(
-              Icons.download,
-              size: 24,
-              color: Colors.white,
-            ), // White icon
+            icon: const Icon(Icons.download, size: 24, color: Colors.white),
             label: const Text(
               'Export Data',
-              style: TextStyle(fontSize: 18, color: Colors.white), // White text
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green, // Green background
-              minimumSize: const Size(double.infinity, 50), // Full-width button
+              backgroundColor: Colors.green,
+              minimumSize: const Size(double.infinity, 50),
             ),
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              Get.offAll(const LoginScreen());
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('isLoggedIn', false); // Update auth state
+              Get.offAll(() => const LoginScreen()); // Navigate to login screen
             },
-            icon: const Icon(
-              Icons.logout,
-              size: 24,
-              color: Colors.white,
-            ), // White icon
+            icon: const Icon(Icons.logout, size: 24, color: Colors.white),
             label: const Text(
               'Logout',
-              style: TextStyle(fontSize: 18, color: Colors.white), // White text
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, // Red background
-              minimumSize: const Size(double.infinity, 50), // Full-width button
+              backgroundColor: Colors.red,
+              minimumSize: const Size(double.infinity, 50),
             ),
           ),
         ],

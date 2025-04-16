@@ -13,17 +13,15 @@ class SharedButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 10.0), // Add padding to the top
+      padding: const EdgeInsets.only(top: 10.0),
       child: BottomNavigationBar(
-        type:
-            BottomNavigationBarType.fixed, // Ensure background color is applied
+        type: BottomNavigationBarType.fixed,
         currentIndex: currentIndex,
         onTap: onTabSelected,
-        backgroundColor: Colors.purple, // Set background color to purple
-        selectedItemColor: Colors.white, // Set selected icon color to white
-        unselectedItemColor:
-            Colors.white70, // Set unselected icon color to a lighter white
-        iconSize: 30.0, // Increase icon size
+        backgroundColor: Colors.purple,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        iconSize: 30.0,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(

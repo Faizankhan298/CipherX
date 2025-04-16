@@ -14,7 +14,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -24,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   List<TransactionModel> _transactions = [];
   List<TransactionModel> _localTransactions =
-      []; // Local cache for transactions
+      []; 
   double _totalIncome = 0.0;
   double _totalExpenses = 0.0;
 
@@ -81,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }).toList();
 
       final box = await Hive.openBox('transactions');
-      await box.clear(); // Clear old data
+      await box.clear(); 
       for (var transaction in transactions) {
         await box.add(transaction.toHive());
       }
@@ -114,11 +113,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if refresh argument is passed
+
     final refresh = Get.arguments?['refresh'] ?? false;
     if (refresh) {
       _syncTransactionsWithFirestore();
-      // Clear the refresh argument after syncing
+    
       Get.arguments?['refresh'] = false;
     }
 
@@ -179,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onTabSelected: (index) {
           setState(() {
             _currentIndex = index;
-            // Fetch latest transactions when switching back to Home tab
+          
             if (_currentIndex == 0) {
               _syncTransactionsWithFirestore();
             }

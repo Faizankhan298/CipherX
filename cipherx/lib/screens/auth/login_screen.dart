@@ -9,7 +9,6 @@ import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -22,8 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> loginWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return; // User canceled the sign-in
-
+      if (googleUser == null) return;
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
@@ -33,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       await FirebaseAuth.instance.signInWithCredential(credential);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
+      await prefs.setBool('isLoggedIn', true); // Update auth state
       Get.off(() => const HomeScreen());
     } catch (e) {
       Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
@@ -47,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passwordController.text.trim(),
       );
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
+      await prefs.setBool('isLoggedIn', true); // Update auth state
       Get.off(() => const HomeScreen());
     } catch (e) {
       Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
@@ -65,11 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
         centerTitle: true,
       ),
       body: GestureDetector(
-        onTap:
-            () =>
-                FocusScope.of(
-                  context,
-                ).unfocus(), // Dismiss keyboard on tap outside
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Center(
           child: SingleChildScrollView(
             child: Padding(

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../wrapper.dart';
 import 'forgot_password_screen.dart';
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
-
   @override
   State<SignupScreen> createState() => _SignupScreenState();
 }
@@ -23,6 +24,24 @@ class _SignupScreenState extends State<SignupScreen> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+      Get.offAll(() => const LoginScreen()); // Redirect to login screen
+    } catch (e) {
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  Future<void> signUpWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', true);
       Get.offAll(() => const Wrapper());
@@ -42,11 +61,7 @@ class _SignupScreenState extends State<SignupScreen> {
         centerTitle: true,
       ),
       body: GestureDetector(
-        onTap:
-            () =>
-                FocusScope.of(
-                  context,
-                ).unfocus(), // Dismiss keyboard on tap outside
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
@@ -113,7 +128,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const Text('Or with'),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: () {}, // Add Google signup logic here
+                    onPressed: signUpWithGoogle,
                     icon: Image.asset('assets/icons/google.png', height: 24),
                     label: const Text(
                       'Google',

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/login_screen.dart';
+import 'home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
@@ -28,14 +28,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToNextScreen() async {
-    await Future.delayed(const Duration(seconds: 3)); // 2-3 seconds delay
+    await Future.delayed(const Duration(seconds: 3));
     final prefs = await SharedPreferences.getInstance();
-    final uid = prefs.getString('uid');
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-    if (uid != null) {
-      Get.offNamed(
-        '/home',
-      ); // Replace '/home' with the actual route for HomeScreen
+    if (isLoggedIn) {
+      Get.off(() => const HomeScreen());
     } else {
       Get.off(() => const LoginScreen());
     }
@@ -50,17 +48,14 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF7B61FF), // Purple background
+      backgroundColor: const Color(0xFF7B61FF),
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/images/logo.png', // Corrected asset path
-                height: 100,
-              ),
+              Image.asset('assets/images/logo.png', height: 100),
               const SizedBox(height: 20),
               const Text(
                 'CipherX',

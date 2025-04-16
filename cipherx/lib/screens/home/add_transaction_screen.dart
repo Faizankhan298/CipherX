@@ -23,7 +23,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (_formKey.currentState!.validate()) {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) {
-        if (!mounted) return; // Guard BuildContext usage
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('User not logged in.')));
@@ -32,45 +32,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
       final transaction = {
         'amount':
-            double.tryParse(_amountController.text) ?? 0.0, // Ensure non-null
+            double.tryParse(_amountController.text) ?? 0.0, 
         'category': _category,
         'description':
             _descriptionController.text.isNotEmpty
                 ? _descriptionController.text
-                : 'No description', // Default if empty
+                : 'No description', 
         'type': _type,
         'userId': userId,
       };
 
       try {
-        // Save to Firestore
         await FirebaseFirestore.instance
             .collection('transactions')
             .add(transaction);
 
-        // Save to Hive
         final box = await Hive.openBox('transactions');
         await box.add(transaction);
 
-        // Clear fields after saving
         setState(() {
           _amountController.clear();
           _descriptionController.clear();
-          _category = 'Food'; // Reset category
-          _type = 'Income'; // Reset type
+          _category = 'Food'; 
+          _type = 'Income'; 
         });
 
-        if (!mounted) return; // Guard BuildContext usage
-        // Show success message
+        if (!mounted) return;  
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaction saved successfully!')),
         );
 
-        // Notify HomeScreen and TransactionTab to fetch latest data
         Get.off(() => const HomeScreen(), arguments: {'refresh': true});
       } catch (e) {
-        if (!mounted) return; // Guard BuildContext usage
-        // Handle errors
+        if (!mounted) return;  
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving transaction: $e')));
@@ -81,8 +75,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        // Center the form
+      body: Center( 
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(

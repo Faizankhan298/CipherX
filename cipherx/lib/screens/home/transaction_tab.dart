@@ -14,8 +14,7 @@ class TransactionTab extends StatefulWidget {
 class _TransactionTabState extends State<TransactionTab> {
   String _selectedCategory = 'All';
   String _selectedType = 'All';
-  List<TransactionModel> _localTransactions =
-      []; // Local cache for transactions
+  List<TransactionModel> _localTransactions = [];
 
   @override
   void initState() {
@@ -37,7 +36,6 @@ class _TransactionTabState extends State<TransactionTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Fetch latest data when the tab is built
     _syncTransactionsWithFirestore();
 
     return Column(
@@ -121,7 +119,7 @@ class _TransactionTabState extends State<TransactionTab> {
           }).toList();
 
       final box = await Hive.openBox('transactions');
-      await box.clear(); // Clear old data
+      await box.clear();
       for (var transaction in transactions) {
         await box.add(transaction.toHive());
       }
